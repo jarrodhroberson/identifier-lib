@@ -1,7 +1,7 @@
 identifier-lib
 ========================
 
-![Build status](https://travis-ci.org/jarrodhroberson/identifier-lib.svg?branch=master)
+![Build status](https://travis-ci.com/jarrodhroberson/identifier-lib.svg?branch=master)
 
 
 To install using Maven:
