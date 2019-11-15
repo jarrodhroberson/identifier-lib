@@ -1,4 +1,4 @@
-package com.vertigrated.identity;
+package com.vertigrated.version;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -14,9 +14,11 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.Converter;
 import com.google.common.base.Objects;
 import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import com.google.common.collect.Ordering;
-import com.vertigrated.identity.Version.Deserializer;
-import com.vertigrated.identity.Version.Serializer;
+import com.vertigrated.version.Version.Deserializer;
+import com.vertigrated.version.Version.Serializer;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import javax.annotation.Nonnull;
@@ -32,10 +34,13 @@ import static java.lang.String.format;
 @Immutable
 @JsonSerialize(using = Serializer.class)
 @JsonDeserialize(using = Deserializer.class)
-public class Version implements Comparable<Version>
+public class Version implements Comparable<Version>, Interner<Version>
 {
     private static final Ordering<Version> NATURAL;
     private static final Converter<String,Version> CONVERTER;
+    private static final Interner<Version> INTERNER;
+
+    public static final Version ONE_ZERO_ZERO;
 
     static
     {
@@ -53,6 +58,10 @@ public class Version implements Comparable<Version>
         };
 
         CONVERTER = new StringConverter();
+
+        INTERNER = Interners.newWeakInterner();
+
+        ONE_ZERO_ZERO = new Version(1,0,0);
     }
 
     @JsonCreator
@@ -103,6 +112,21 @@ public class Version implements Comparable<Version>
     @Nonnull
     public Version nextPatch() { return new Version(this.major, this.minor, this.patch + 1); }
 
+    public boolean isBefore(@Nonnull final Version other)
+    {
+        return this.compareTo(other) < 0;
+    }
+
+    public boolean isAfter(@Nonnull final Version other)
+    {
+        return this.compareTo(other) > 0;
+    }
+
+    public boolean isBetween(@Nonnull final Version first, @Nonnull final Version last)
+    {
+        return this.compareTo(first) >= 0 && this.compareTo(last) < 0;
+    }
+
     @Override
     public int compareTo(@Nonnull final Version o)
     {
@@ -112,24 +136,30 @@ public class Version implements Comparable<Version>
     @Override
     public int hashCode()
     {
-        return Objects.hashCode(major, minor, patch);
+        return Objects.hashCode(this.major, this.minor, this.patch);
     }
 
     @Override
-    public boolean equals(final Object o)
+    public boolean equals(final Object other)
     {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
-        final Version version = (Version) o;
-        return Objects.equal(major, version.major) &&
-        Objects.equal(minor, version.minor) &&
-        Objects.equal(patch, version.patch);
+        if (this == other) { return true; }
+        if (other == null || getClass() != other.getClass()) { return false; }
+        final Version version = (Version) other;
+        return Objects.equal(this.major, version.major) &&
+        Objects.equal(this.minor, version.minor) &&
+        Objects.equal(this.patch, version.patch);
     }
 
     @Override
     public String toString()
     {
         return CONVERTER.reverse().convert(this);
+    }
+
+    @Override
+    public Version intern(@Nonnull final Version sample)
+    {
+        return INTERNER.intern(sample);
     }
 
     public static class Serializer extends JsonSerializer<Version>
